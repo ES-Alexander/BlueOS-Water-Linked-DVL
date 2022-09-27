@@ -498,6 +498,7 @@ class DvlDriver(threading.Thread):
                 continue
             r, _, _ = select([self.socket], [], [], 0)
             data = None
+            line = None
             if r:
                 try:
                     recv = self.socket.recv(1024).decode()
@@ -545,6 +546,7 @@ class DvlDriver(threading.Thread):
                                              angles,
                                              dt=dt,
                                              confidence=c)
+
                     # loop.run_until_complete(a.get_ticks())
 
             elif (self.is_gps_passthrough(line)):
