@@ -10,14 +10,15 @@ import time
 from enum import Enum
 from select import select
 from typing import Any, Dict, List
+import pynmea2
 
 from loguru import logger
 
 from blueoshelper import request
-from dvlfinder import find_the_dvl
+# from dvlfinder import find_the_dvl
 from mavlink2resthelper import GPS_GLOBAL_ORIGIN_ID, Mavlink2RestHelper
 
-HOSTNAME = "waterlinked-dvl.local"
+HOSTNAME = "192.168.2.3"
 DVL_DOWN = 1
 DVL_FORWARD = 2
 LATLON_TO_CM = 1.1131884502145034e5
@@ -47,15 +48,16 @@ class DvlDriver(threading.Thread):
     version = ""
     mav = Mavlink2RestHelper()
     socket = None
-    port = 16171  # Waterlinked mentioned they won't allow changing or disabling this
+    port = 27000  # Waterlinked mentioned they won't allow changing or disabling this
     last_attitude = (0, 0, 0)  # used for calculating the attitude delta
     current_orientation = DVL_DOWN
     enabled = True
-    rangefinder = True
+    rangefinder = False
     hostname = HOSTNAME
     timeout = 3  # tcp timeout in seconds
     origin = [0, 0]
-    settings_path = os.path.join(os.path.expanduser("~"), ".config", "dvl", "settings.json")
+    settings_path = os.path.join(os.path.expanduser(
+        "~"), ".config", "dvl", "settings.json")
 
     should_send = MessageType.POSITION_DELTA
     reset_counter = 0
@@ -153,10 +155,12 @@ class DvlDriver(threading.Thread):
         self.status = f"Trying to talk to dvl at http://{ip}/api/v1/about"
         while not self.version:
             if not request(f"http://{ip}/api/v1/about"):
-                self.report_status(f"could not talk to dvl at {ip}, looking for it in the local network...")
+                self.report_status(
+                    f"could not talk to dvl at {ip}, looking for it in the local network...")
             found_dvl = find_the_dvl()
             if found_dvl:
-                self.report_status(f"Dvl found at address {found_dvl}, using it instead.")
+                self.report_status(
+                    f"Dvl found at address {found_dvl}, using it instead.")
                 self.hostname = found_dvl
                 return
             time.sleep(1)
@@ -203,17 +207,21 @@ class DvlDriver(threading.Thread):
         From https://github.com/ArduPilot/ardupilot/blob/Sub-4.1/libraries/AP_Common/Location.cpp#L206
         """
         x = (lat - self.origin[0]) * LATLON_TO_CM
-        y = self.longitude_scale((lat + self.origin[0]) / 2) * LATLON_TO_CM * (lon - self.origin[1])
+        y = self.longitude_scale(
+            (lat + self.origin[0]) / 2) * LATLON_TO_CM * (lon - self.origin[1])
         return [x, y]
 
     def has_origin_set(self) -> bool:
         try:
-            old_time = self.mav.get_float("/GPS_GLOBAL_ORIGIN/message/time_usec")
+            old_time = self.mav.get_float(
+                "/GPS_GLOBAL_ORIGIN/message/time_usec")
             if math.isnan(old_time):
-                logger.warning("Unable to read current time for GPS_GLOBAL_ORIGIN, using 0")
+                logger.warning(
+                    "Unable to read current time for GPS_GLOBAL_ORIGIN, using 0")
                 old_time = 0
         except Exception as e:
-            logger.warning(f"Unable to read current time for GPS_GLOBAL_ORIGIN, using 0: {e}")
+            logger.warning(
+                f"Unable to read current time for GPS_GLOBAL_ORIGIN, using 0: {e}")
             old_time = 0
 
         for attempt in range(5):
@@ -221,9 +229,11 @@ class DvlDriver(threading.Thread):
             self.mav.request_message(GPS_GLOBAL_ORIGIN_ID)
             time.sleep(0.5)  # make this a timeout?
             try:
-                new_origin_data = json.loads(self.mav.get("/GPS_GLOBAL_ORIGIN/message"))
+                new_origin_data = json.loads(
+                    self.mav.get("/GPS_GLOBAL_ORIGIN/message"))
                 if new_origin_data["time_usec"] != old_time:
-                    self.origin = [new_origin_data["latitude"] * 1e-7, new_origin_data["longitude"] * 1e-7]
+                    self.origin = [new_origin_data["latitude"]
+                                   * 1e-7, new_origin_data["longitude"] * 1e-7]
                     return True
                 continue  # try again
             except Exception as e:
@@ -240,7 +250,8 @@ class DvlDriver(threading.Thread):
             logger.info("Origin was never set, trying to set it.")
             self.set_gps_origin(lat, lon)
         else:
-            logger.info("Origin has already been set, sending POSITION_ESTIMATE instead")
+            logger.info(
+                "Origin has already been set, sending POSITION_ESTIMATE instead")
             # if we already have an origin set, send a new position instead
             x, y = self.lat_lng_to_NE_XY_cm(lat, lon)
             depth = float(self.mav.get("/VFR_HUD/message/alt"))
@@ -276,7 +287,8 @@ class DvlDriver(threading.Thread):
         self.rangefinder = enable
         self.save_settings()
         if enable:
-            self.mav.set_param("RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
+            self.mav.set_param(
+                "RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
         return True
 
     def setup_mavlink(self) -> None:
@@ -285,7 +297,9 @@ class DvlDriver(threading.Thread):
         appropriate rates
         """
         self.report_status("Setting up MAVLink streams...")
-        self.mav.ensure_message_frequency("ATTITUDE", 30, 5)
+        self.mav.ensure_message_frequency("ATTITUDE", 30, 10)
+        self.mav.ensure_message_frequency("GLOBAL_POSITION_INT", 33, 10)
+        self.mav.ensure_message_frequency("LOCAL_POSITION_NED", 32, 10)
 
     def setup_params(self) -> None:
         """
@@ -298,11 +312,14 @@ class DvlDriver(threading.Thread):
         self.mav.set_param("EK3_ENABLE", "MAV_PARAM_TYPE_UINT8", 1)
         self.mav.set_param("VISO_TYPE", "MAV_PARAM_TYPE_UINT8", 1)
         self.mav.set_param("EK3_GPS_TYPE", "MAV_PARAM_TYPE_UINT8", 3)
-        self.mav.set_param("EK3_SRC1_POSXY", "MAV_PARAM_TYPE_UINT8", 6)  # EXTNAV
-        self.mav.set_param("EK3_SRC1_VELXY", "MAV_PARAM_TYPE_UINT8", 6)  # EXTNAV
+        self.mav.set_param(
+            "EK3_SRC1_POSXY", "MAV_PARAM_TYPE_UINT8", 6)  # EXTNAV
+        self.mav.set_param(
+            "EK3_SRC1_VELXY", "MAV_PARAM_TYPE_UINT8", 6)  # EXTNAV
         self.mav.set_param("EK3_SRC1_POSZ", "MAV_PARAM_TYPE_UINT8", 1)  # BARO
         if self.rangefinder:
-            self.mav.set_param("RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
+            self.mav.set_param(
+                "RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
 
     def setup_connections(self, timeout=300) -> None:
         """
@@ -317,7 +334,29 @@ class DvlDriver(threading.Thread):
             except socket.error:
                 time.sleep(0.1)
             timeout -= 1
-        self.report_status(f"Setup connection to {self.host}:{self.port} timed out")
+        self.report_status(
+            f"Setup connection to {self.host}:{self.port} timed out")
+        return False
+
+    def setup_socket(self, timeout=300):
+        """
+        Sets up the socket to talk to the DVL
+        """
+        while timeout > 0:
+            try:
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                self.socket.setblocking(False)
+                self.socket.bind(('0.0.0.0', 27000))
+                return True
+            except socket.error:
+                time.sleep(0.1)
+            except Exception as error:
+                print(error)
+                time.sleep(0.1)
+            timeout -= 1
+        self.status = "Setup connection timeout"
         return False
 
     def reconnect(self):
@@ -326,7 +365,8 @@ class DvlDriver(threading.Thread):
                 self.socket.shutdown(socket.SHUT_RDWR)
                 self.socket.close()
             except Exception as e:
-                self.report_status(f"Unable to reconnect: {e}, looking for dvl again...")
+                self.report_status(
+                    f"Unable to reconnect: {e}, looking for dvl again...")
                 self.look_for_dvl()
         success = self.setup_connections()
         if success:
@@ -370,9 +410,11 @@ class DvlDriver(threading.Thread):
 
         if self.should_send == MessageType.POSITION_DELTA:
             if self.current_orientation == DVL_DOWN:
-                self.mav.send_vision([dx, dy, dz], angles, dt=data["time"] * 1e3, confidence=confidence)
+                self.mav.send_vision(
+                    [dx, dy, dz], angles, dt=data["time"] * 1e3, confidence=confidence)
             elif self.current_orientation == DVL_FORWARD:
-                self.mav.send_vision([dz, dy, -dx], angles, dt=data["time"] * 1e3, confidence=confidence)
+                self.mav.send_vision(
+                    [dz, dy, -dx], angles, dt=data["time"] * 1e3, confidence=confidence)
         elif self.should_send == MessageType.SPEED_ESTIMATE:
             if self.current_orientation == DVL_DOWN:
                 self.mav.send_vision_speed_estimate([vx, vy, vz])
@@ -380,12 +422,21 @@ class DvlDriver(threading.Thread):
                 self.mav.send_vision_speed_estimate([vz, vy, -vx])
 
     def handle_position_local(self, data):
+        # if True:
         if self.should_send == MessageType.POSITION_ESTIMATE:
             x, y, z, roll, pitch, yaw = data["x"], data["y"], data["z"], data["roll"], data["pitch"], data["yaw"]
             self.timestamp = data["ts"]
             self.mav.send_vision_position_estimate(
-                self.timestamp, [x, y, z], [roll, pitch, yaw], reset_counter=self.reset_counter
+                self.timestamp, [x, y, z], [roll, pitch,
+                                            yaw], reset_counter=self.reset_counter
             )
+            # print(data)
+            # x, y, z, roll, pitch, yaw = data["x"], data["y"], data["z"], data["roll"], data["pitch"], data["yaw"]
+            # self.timestamp = data["ts"]
+            # self.mav.send_vision_position_estimate(
+            #     self.timestamp, [x, y, z], [roll, pitch,
+            #                                 yaw], reset_counter=self.reset_counter
+            # )
 
     def check_temperature(self):
         now = time.time()
@@ -393,22 +444,45 @@ class DvlDriver(threading.Thread):
             return
         self.last_temperature_check_time = now
         try:
-            status = json.loads(request(f"http://{self.hostname}/api/v1/about/status"))
+            status = json.loads(
+                request(f"http://{self.hostname}/api/v1/about/status"))
 
             temp = float(status["temperature"])
             if temp > self.temperature_too_hot:
-                self.report_status(f"DVL is too hot ({temp} C). Please cool it down.")
-                self.mav.send_statustext(f"DVL is too hot ({temp} C). Please cool it down.")
+                self.report_status(
+                    f"DVL is too hot ({temp} C). Please cool it down.")
+                self.mav.send_statustext(
+                    f"DVL is too hot ({temp} C). Please cool it down.")
         except Exception as e:
             self.report_status(e)
+
+    def is_nmea(self, packet):
+        try:
+            if pynmea2.parse(packet):
+                return True
+            else:
+                return False
+        except Exception as error:
+            pass
+
+    def is_gps_passthrough(self, packet):
+        # print(packet)
+        try:
+            if (packet[0:5] == 'GPS:$'):
+                return True
+            else:
+                return False
+        except Exception as error:
+            pass
 
     def run(self):
         """
         Runs the main routing
         """
-        self.load_settings()
-        self.look_for_dvl()
-        self.setup_connections()
+        # self.load_settings()
+        # self.look_for_dvl()
+        # self.setup_connections()
+        self.setup_socket()
         self.wait_for_vehicle()
         self.setup_mavlink()
         self.setup_params()
@@ -441,8 +515,53 @@ class DvlDriver(threading.Thread):
             if len(buf) > 0:
                 lines = buf.split("\n", 1)
                 if len(lines) > 1:
+                    # print(lines)
                     buf = lines[1]
-                    data = json.loads(lines[0])
+                    line = lines[0]
+                    # data = json.loads(lines[0])
+            if self.is_nmea(line):
+                data = pynmea2.parse(line)
+                # print(repr(data))
+                if data.sentence_type == 'PDL':
+                    print(repr(data))
+                    dx, dy, dz = data.pdx, data.pdy, data.pdz
+                    dt = data.dtu
+                    c = data.c
+
+                    # feeding back the angles seem to aggravate the gyro drift issue
+                    # angles = self.update_attitude()
+                    angles = [0, 0, 0]
+
+                    # if self.current_orientation == DVL_DOWN and c >= 70:
+
+                    if self.current_orientation == DVL_DOWN:
+                        self.mav.send_vision([dx, dy, dz],
+                                             angles,
+                                             dt=dt,
+                                             confidence=c)
+
+                    elif self.current_orientation == DVL_FORWARD:
+                        self.mav.send_vision([dz, dy, -dx],
+                                             angles,
+                                             dt=dt,
+                                             confidence=c)
+                    # loop.run_until_complete(a.get_ticks())
+
+            elif (self.is_gps_passthrough(line)):
+                try:
+                    data = pynmea2.parse(line[4:])
+                    if data.latitude and data.longitude:
+
+                        if data.gps_qual > 0 and float(data.horizontal_dil) < 1.8 and float(data.num_sats) > 5:
+                            # print("HDOP: ", str(
+                            #     float(data.horizontal_dil)))
+                            # print("Fix: ", str(data.gps_qual))
+                            # print(repr(data))
+                            ms = time.time()
+                            self.mav.set_gps_origin(
+                                lat=data.latitude, lon=data.longitude)
+                except Exception as error:
+                    continue
 
             if not connected:
                 buf = ""
@@ -451,7 +570,7 @@ class DvlDriver(threading.Thread):
                 time.sleep(0.003)
                 continue
 
-            if not data:
+            if not line:
                 if time.time() - self.last_recv_time > self.timeout:
                     buf = ""
                     self.report_status("timeout, restarting")
@@ -461,15 +580,5 @@ class DvlDriver(threading.Thread):
 
             self.status = "Running"
 
-            if "type" not in data:
-                continue
-
-            if data["type"] == "velocity":
-
-                self.handle_velocity(data)
-
-            if data["type"] == "position_local":
-                self.handle_position_local(data)
-            self.check_temperature()
             time.sleep(0.003)
         logger.error("Driver Quit! This should not happen.")

@@ -8,13 +8,15 @@ from loguru import logger
 
 from blueoshelper import post, request
 
-MAVLINK2REST_URL = "http://127.0.0.1/mavlink2rest"
+MAVLINK2REST_URL = "http://192.168.2.2/mavlink2rest"
 GPS_GLOBAL_ORIGIN_ID = 49
 
 # holds the last status so we dont flood it
 last_status = ""
 
 # pylint: disable=too-many-instance-attributes
+
+
 class Mavlink2RestHelper:
     """
     Responsible for interfacing with Mavlink2Rest
@@ -235,7 +237,8 @@ class Mavlink2RestHelper:
             if new_message_counter > first_message_counter:
                 break
             if (time.time() - t0) > timeout:
-                raise Exception(f"Did not receive an updated {message_name} before timeout.")
+                raise Exception(
+                    f"Did not receive an updated {message_name} before timeout.")
             time.sleep(timeout / 10.0)
 
         return new_message
@@ -260,9 +263,11 @@ class Mavlink2RestHelper:
         message_name = message_name.upper()
         # load message template from mavlink2rest helper
         try:
-            data = json.loads(requests.get(MAVLINK2REST_URL + "/helper/mavlink?name=COMMAND_LONG").text)
+            data = json.loads(requests.get(
+                MAVLINK2REST_URL + "/helper/mavlink?name=COMMAND_LONG").text)
         except Exception as error:
-            logger.info(f"unable to get mavlink template for {message_name} from Mavlink2rest: {error}")
+            logger.info(
+                f"unable to get mavlink template for {message_name} from Mavlink2rest: {error}")
             return False
 
         # msg_id = getattr(mavutil.mavlink, 'MAVLINK_MSG_ID_' + message_name)
@@ -283,7 +288,8 @@ class Mavlink2RestHelper:
         Returns True if succesful, False otherwise
         """
         try:
-            data = json.loads(requests.get(MAVLINK2REST_URL + "/helper/mavlink?name=PARAM_SET").text)
+            data = json.loads(requests.get(
+                MAVLINK2REST_URL + "/helper/mavlink?name=PARAM_SET").text)
 
             for i, char in enumerate(param_name):
                 data["message"]["param_id"][i] = char
@@ -302,8 +308,10 @@ class Mavlink2RestHelper:
         Sends STATUSTEXT message to the GCS
         """
         try:
-            data = self.statustext_template.format(severity, str(list(text)).replace("'", '"'))
-            result = requests.post(MAVLINK2REST_URL + "/mavlink", json=json.loads(data))
+            data = self.statustext_template.format(
+                severity, str(list(text)).replace("'", '"'))
+            result = requests.post(
+                MAVLINK2REST_URL + "/mavlink", json=json.loads(data))
             return result.status_code == 200
         except Exception as error:
             logger.warning("Error sending STATUSTEXT: " + str(error))
@@ -360,7 +368,8 @@ class Mavlink2RestHelper:
         post(MAVLINK2REST_URL + "/mavlink", data=data)
 
     def set_gps_origin(self, lat, lon):
-        data = self.gps_origin_template.format(lat=int(float(lat) * 1e7), lon=int(float(lon) * 1e7))
+        data = self.gps_origin_template.format(
+            lat=int(float(lat) * 1e7), lon=int(float(lon) * 1e7))
         post(MAVLINK2REST_URL + "/mavlink", data=data)
 
     def get_orientation(self):
@@ -375,7 +384,8 @@ class Mavlink2RestHelper:
         """
         # load message template from mavlink2rest helper
         try:
-            data = json.loads(requests.get(MAVLINK2REST_URL + "/helper/mavlink?name=COMMAND_LONG").text)
+            data = json.loads(requests.get(
+                MAVLINK2REST_URL + "/helper/mavlink?name=COMMAND_LONG").text)
         except Exception as error:
             logger.warning(f"Unable to request message {msg_id}: {error}")
             return False

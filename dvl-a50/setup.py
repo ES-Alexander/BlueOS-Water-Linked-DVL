@@ -10,9 +10,9 @@ if not os.environ.get("PYTHONHTTPSVERIFY", "") and getattr(ssl, "_create_unverif
     ssl._create_default_https_context = ssl._create_unverified_context
 
 setup(
-    name="dvl_service",
+    name="cerulean-dvl_service",
     version="0.1.0",
-    description="Waterlinked A-50 DVL service",
+    description="Cerulean DVL service",
     license="MIT",
     install_requires=[
         "python3-nmap == 1.5.4",
