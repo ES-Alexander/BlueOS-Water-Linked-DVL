@@ -297,9 +297,9 @@ class DvlDriver(threading.Thread):
         appropriate rates
         """
         self.report_status("Setting up MAVLink streams...")
-        self.mav.ensure_message_frequency("ATTITUDE", 30, 10)
-        self.mav.ensure_message_frequency("GLOBAL_POSITION_INT", 33, 10)
-        self.mav.ensure_message_frequency("LOCAL_POSITION_NED", 32, 10)
+        self.mav.ensure_message_frequency("ATTITUDE", 30, 30)
+        self.mav.ensure_message_frequency("GLOBAL_POSITION_INT", 33, 30)
+        self.mav.ensure_message_frequency("LOCAL_POSITION_NED", 32, 30)
 
     def setup_params(self) -> None:
         """
