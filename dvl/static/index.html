@@ -30,8 +30,8 @@
 					<v-col>
 						<v-card height="600">
 							<v-switch v-model="this.enabled" inset :label="`Enable Driver`" @change="setDvlEnabled($event)"></v-switch>
-							<h2>Rangefinder:</h2>
-							<v-checkbox v-model="this.rangefinder" :label="`Use as MAVLink rangefinder`" @change="setDvlAsRangefinder($event)"></v-checkbox>
+							<!-- <h2>Rangefinder:</h2>
+							<v-checkbox v-model="this.rangefinder" :label="`Use as MAVLink rangefinder`" @change="setDvlAsRangefinder($event)"></v-checkbox> -->
 							<h4>Status</h4>
 							<div>
 								<textarea readonly style="width:100%;"
@@ -77,9 +77,10 @@
 				</v-row>
 				<v-row>
 					<v-col>
-						<v-card height="900" v-if='hostname'>
+						<!-- Cerulean DVL has no GUI -->
+						<!-- <v-card height="900" v-if='hostname'>
 							<iframe style="width: 100%; height: 100%;" :src='`http://${hostname}`'></iframe>
-						</v-card>
+						</v-card> -->
 					</v-col>
 				</v-row>
 			</v-container>
@@ -143,7 +144,7 @@
 					})
 			},
 			updateVehiclePosition() {
-				axios.get(`http://${window.location.hostname}/mavlink2rest/mavlink/vehicles/1/components/1/messages/GLOBAL_POSITION_INT/message`, { timeout: 1000 })
+				axios.get(`http://${window.location.hostname}/mavlink/vehicles/1/components/1/messages/GLOBAL_POSITION_INT/message`, { timeout: 1000 })
 					.then((response) => {
 						lat = response.data.lat/1e7
 						lon = response.data.lon/1e7
@@ -162,7 +163,7 @@
 							this.rovMarker.setLatLng(new L.LatLng(lat, lon))
 						}
 					})
-					axios.get(`http://${window.location.hostname}/mavlink2rest/mavlink/vehicles/1/components/1/messages/ATTITUDE/message/yaw`, { timeout: 1000 })
+					axios.get(`http://${window.location.hostname}/mavlink/vehicles/1/components/1/messages/ATTITUDE/message/yaw`, { timeout: 1000 })
 					.then((response) => {
 						angle = parseFloat(response.data) * 57.2958
 						this.rovMarker.setRotationAngle(angle)
