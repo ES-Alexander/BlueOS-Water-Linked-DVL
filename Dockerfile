@@ -10,4 +10,34 @@ RUN mkdir -p /home/pi
 COPY dvl /home/pi/cerulean-dvl
 RUN cd /home/pi/cerulean-dvl && pip3 install .
 
+#Versioned Data
+LABEL version="1.0.0"
+LABEL permissions '{\
+    "ExposedPorts": {\
+    "9002/tcp": {}\
+    },\
+    "HostConfig": {\
+    "PortBindings": {\
+    "9002/tcp": [\
+    {\
+    "HostPort": ""\
+    }\
+    ]\
+    }\
+    }\
+    }'
+LABEL authors='[\
+    {\
+    "name": "Nick Nothom",\
+    "email": "nick.nothom@ceruleansonar.com"\
+    }\
+    ]'
+LABEL docs='https://ceruleansonar.com/pages/cerulean-support'
+LABEL support 'https://forum.ceruleansonar.com/categories'
+LABEL company='{\
+    "about": "",\
+    "name": "Cerulean Sonar",\
+    "email": "dennys.bisogno@ceruleansonar.com"\
+    }'
+
 ENTRYPOINT /home/pi/cerulean-dvl/main.py
