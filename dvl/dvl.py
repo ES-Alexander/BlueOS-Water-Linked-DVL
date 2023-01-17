@@ -423,6 +423,29 @@ class DvlDriver(threading.Thread):
             elif self.current_orientation == DVL_FORWARD:
                 self.mav.send_vision_speed_estimate([vz, vy, -vx])
 
+    def handle_PDL(self, data):
+        dx, dy, dz = data.pdx, data.pdy, data.pdz
+        dt = data.dtu
+        c = data.c
+
+        angles = [0, 0, 0]
+
+        # if self.rangefinder:
+        #     self.mav.send_rangefinder(alt)
+
+        if self.should_send == MessageType.POSITION_DELTA:
+            if self.current_orientation == DVL_DOWN:
+                self.mav.send_vision(
+                    [dx, dy, dz], angles, dt=dt, confidence=c)
+            elif self.current_orientation == DVL_FORWARD:
+                self.mav.send_vision(
+                    [dz, dy, -dx], angles, dt=dt, confidence=c)
+        # elif self.should_send == MessageType.SPEED_ESTIMATE:
+        #     if self.current_orientation == DVL_DOWN:
+        #         self.mav.send_vision_speed_estimate([vx, vy, vz])
+        #     elif self.current_orientation == DVL_FORWARD:
+        #         self.mav.send_vision_speed_estimate([vz, vy, -vx])
+
     def handle_position_local(self, data):
         # if True:
         if self.should_send == MessageType.POSITION_ESTIMATE:
@@ -528,43 +551,18 @@ class DvlDriver(threading.Thread):
                 data = pynmea2.parse(line)
                 # print(repr(data))
                 if data.sentence_type == 'PDL':
-                    print(repr(data))
-                    dx, dy, dz = data.pdx, data.pdy, data.pdz
-                    dt = data.dtu
-                    c = data.c
-
-                    # feeding back the angles seem to aggravate the gyro drift issue
-                    # angles = self.update_attitude()
-                    angles = [0, 0, 0]
-
-                    # if self.current_orientation == DVL_DOWN and c >= 70:
-
-                    if self.current_orientation == DVL_DOWN:
-                        self.mav.send_vision([dx, dy, dz],
-                                             angles,
-                                             dt=dt,
-                                             confidence=c)
-
-                    elif self.current_orientation == DVL_FORWARD:
-                        self.mav.send_vision([dz, dy, -dx],
-                                             angles,
-                                             dt=dt,
-                                             confidence=c)
-
-                    # loop.run_until_complete(a.get_ticks())
-
+                    self.handle_PDL(data)
             elif (self.is_gps_passthrough(line)):
                 try:
                     data = pynmea2.parse(line[4:])
                     if data.latitude and data.longitude:
-
                         if data.gps_qual > 0 and float(data.horizontal_dil) < 1.8 and float(data.num_sats) > 5:
                             # print("HDOP: ", str(
                             #     float(data.horizontal_dil)))
                             # print("Fix: ", str(data.gps_qual))
-                            # print(repr(data))
+                            print(repr(data))
                             ms = time.time()
-                            self.mav.set_gps_origin(
+                            self.set_gps_origin(
                                 lat=data.latitude, lon=data.longitude)
                 except Exception as error:
                     continue
