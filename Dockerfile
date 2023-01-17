@@ -1,12 +1,13 @@
 FROM python:3.9-slim-bullseye
-
-RUN apt update && apt install -y nmap
+ENV PIP_ROOT_USER_ACTION=ignore
+RUN pip install --upgrade pip
+RUN apt update && apt install -y nmap git
 
 # Create default user folder
 RUN mkdir -p /home/pi
 
 # Install dvl service
-COPY dvl-a50 /home/pi/dvl-a50
-RUN cd /home/pi/dvl-a50 && pip3 install .
+COPY dvl /home/pi/cerulean-dvl
+RUN cd /home/pi/cerulean-dvl && pip3 install .
 
-ENTRYPOINT /home/pi/dvl-a50/main.py
+ENTRYPOINT /home/pi/cerulean-dvl/main.py

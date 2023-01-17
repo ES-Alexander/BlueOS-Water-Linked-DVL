@@ -1,5 +1,5 @@
 """
-Code for integration of Waterlinked DVL A50 with Companion and ArduSub
+Code for integration of Cerulean DVL with Companion and ArduSub
 """
 import json
 import math
@@ -48,7 +48,7 @@ class DvlDriver(threading.Thread):
     version = ""
     mav = Mavlink2RestHelper()
     socket = None
-    port = 27000  # Waterlinked mentioned they won't allow changing or disabling this
+    port = 27000
     last_attitude = (0, 0, 0)  # used for calculating the attitude delta
     current_orientation = DVL_DOWN
     enabled = True
@@ -88,6 +88,7 @@ class DvlDriver(threading.Thread):
                 self.rangefinder = data["rangefinder"]
                 self.should_send = data["should_send"]
                 logger.debug("Loaded settings: ", data)
+
         except FileNotFoundError:
             logger.warning("Settings file not found, using default.")
         except ValueError:
@@ -117,6 +118,7 @@ class DvlDriver(threading.Thread):
                         "enabled": self.enabled,
                         "orientation": self.current_orientation,
                         "hostname": self.hostname,
+                        "origin": self.origin,
                         "rangefinder": self.rangefinder,
                         "should_send": self.should_send,
                     }
@@ -479,7 +481,8 @@ class DvlDriver(threading.Thread):
         """
         Runs the main routing
         """
-        # self.load_settings()
+        # self.save_settings()
+        self.load_settings()
         # self.look_for_dvl()
         # self.setup_connections()
         self.setup_socket()

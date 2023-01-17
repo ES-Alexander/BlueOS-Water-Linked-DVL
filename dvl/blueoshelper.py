@@ -5,7 +5,7 @@ from loguru import logger
 
 def request(url):
     """
-    Sends a request to "url" and returns text result if successfull, None otherwise
+    Sends a request to "url" and returns text result if successful, None otherwise
     """
     try:
         return urllib.request.urlopen(url, timeout=1).read().decode()

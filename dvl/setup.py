@@ -24,5 +24,6 @@ setup(
         "click == 7.1.2",
         "Werkzeug==1.0.1",
         "requests",
+        "pynmea2 @ git+https://github.com/CeruleanSonar/pynmea2"
     ],
 )

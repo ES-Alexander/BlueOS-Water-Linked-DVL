@@ -1,0 +1,9 @@
+{
+    "name":"Cerulean DVL",
+    "description":"Driver for Cerulean DVL",
+    "icon":"mdi-clock-fast",
+    "company":"Cerulean Sonar",
+    "version":"1.0.0",
+    "webpage":"https://github.com/ceruleansonar/BlueOS-Cerulean-DVL",
+    "api":""
+ }
