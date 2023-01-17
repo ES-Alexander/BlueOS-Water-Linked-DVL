@@ -483,6 +483,7 @@ class DvlDriver(threading.Thread):
         """
         # self.save_settings()
         self.load_settings()
+        self.save_settings()
         # self.look_for_dvl()
         # self.setup_connections()
         self.setup_socket()
