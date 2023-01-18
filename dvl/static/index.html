@@ -144,7 +144,7 @@
 					})
 			},
 			updateVehiclePosition() {
-				axios.get(`http://${window.location.hostname}/mavlink/vehicles/1/components/1/messages/GLOBAL_POSITION_INT/message`, { timeout: 1000 })
+				axios.get(`http://${window.location.hostname}/mavlink2rest/mavlink/vehicles/1/components/1/messages/GLOBAL_POSITION_INT/message`, { timeout: 1000 })
 					.then((response) => {
 						lat = response.data.lat/1e7
 						lon = response.data.lon/1e7
@@ -163,7 +163,7 @@
 							this.rovMarker.setLatLng(new L.LatLng(lat, lon))
 						}
 					})
-					axios.get(`http://${window.location.hostname}/mavlink/vehicles/1/components/1/messages/ATTITUDE/message/yaw`, { timeout: 1000 })
+					axios.get(`http://${window.location.hostname}/mavlink2rest/mavlink/vehicles/1/components/1/messages/ATTITUDE/message/yaw`, { timeout: 1000 })
 					.then((response) => {
 						angle = parseFloat(response.data) * 57.2958
 						this.rovMarker.setRotationAngle(angle)

@@ -12,19 +12,9 @@ RUN cd /home/pi/cerulean-dvl && pip3 install .
 
 #Versioned Data
 LABEL version="1.0.0"
-LABEL permissions '{\
-    "ExposedPorts": {\
-    "9002/tcp": {}\
-    },\
-    "HostConfig": {\
-    "PortBindings": {\
-    "9002/tcp": [\
+LABEL permissions '\
     {\
-    "HostPort": ""\
-    }\
-    ]\
-    }\
-    }\
+    "NetworkMode": "host"\
     }'
 LABEL authors='[\
     {\
