@@ -23,7 +23,7 @@ LABEL authors='[\
     }\
     ]'
 LABEL docs='https://ceruleansonar.com/pages/cerulean-support'
-LABEL support 'https://forum.ceruleansonar.com/categories'
+LABEL support='https://forum.ceruleansonar.com/categories'
 LABEL company='{\
     "about": "",\
     "name": "Cerulean Sonar",\
