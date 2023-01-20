@@ -12,7 +12,7 @@ RUN cd /home/pi/cerulean-dvl && pip3 install .
 
 #Versioned Data
 LABEL version="1.0.0"
-LABEL permissions '\
+LABEL permissions='\
     {\
     "NetworkMode": "host"\
     }'

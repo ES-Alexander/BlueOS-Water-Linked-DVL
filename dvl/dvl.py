@@ -323,6 +323,10 @@ class DvlDriver(threading.Thread):
             self.mav.set_param(
                 "RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
 
+    def setup_dvl(self):
+        self.set_gps_enabled()
+        self.set_dvpdl_enabled()
+
     def setup_connections(self, timeout=300) -> None:
         """
         Sets up the socket to talk to the DVL
@@ -500,6 +504,26 @@ class DvlDriver(threading.Thread):
         except Exception as error:
             pass
 
+    def set_gps_enabled(self, enable=True):
+        setting = "RETWEET-GPS"
+        command = ""
+        if enable:
+            command = "ON"
+        else:
+            command = "OFF"
+        message = setting + " " + command + "\r\n"
+        self.socket.sendto(message.encode(), (self.host, self.port))
+
+    def set_dvpdl_enabled(self, enable=True):
+        setting = "SEND-DVPDL"
+        command = ""
+        if enable:
+            command = "ON"
+        else:
+            command = "OFF"
+        message = setting + " " + command + "\r\n"
+        self.socket.sendto(message.encode(), (self.host, self.port))
+
     def run(self):
         """
         Runs the main routing
@@ -513,6 +537,7 @@ class DvlDriver(threading.Thread):
         self.wait_for_vehicle()
         self.setup_mavlink()
         self.setup_params()
+        self.setup_dvl()
         time.sleep(1)
         self.report_status("Running")
         self.last_recv_time = time.time()
