@@ -11,7 +11,7 @@ COPY dvl /home/pi/cerulean-dvl
 RUN cd /home/pi/cerulean-dvl && pip3 install .
 
 #Versioned Data
-LABEL version="1.0.0"
+LABEL version="1.0.1"
 LABEL permissions '\
     {\
     "NetworkMode": "host"\
@@ -30,5 +30,5 @@ LABEL company '{\
     "name": "Cerulean Sonar",\
     "email": "dennys.bisogno@ceruleansonar.com"\
     }'
-
+LABEL readme 'https://raw.githubusercontent.com/CeruleanSonar/BlueOS-Cerulean-DVL/{tag}/README.md'
 ENTRYPOINT /home/pi/cerulean-dvl/main.py

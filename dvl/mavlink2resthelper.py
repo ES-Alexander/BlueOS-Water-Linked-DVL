@@ -317,6 +317,7 @@ class Mavlink2RestHelper:
             logger.warning("Error sending STATUSTEXT: " + str(error))
             return False
 
+    # https://mavlink.io/en/messages/ardupilotmega.html#VISION_POSITION_DELTA
     def send_vision(self, position_deltas, rotation_deltas=(0, 0, 0), confidence=100, dt=125000):
         "Sends message VISION_POSITION_DELTA to flight controller"
         data = self.vision_template.format(
@@ -359,6 +360,7 @@ class Mavlink2RestHelper:
         )
         logger.info(post(MAVLINK2REST_URL + "/mavlink", data=data))
 
+    # https://mavlink.io/en/messages/common.html#DISTANCE_SENSOR
     def send_rangefinder(self, distance: float):
         "Sends message DISTANCE_SENSOR to flight controller"
         if distance == -1:
