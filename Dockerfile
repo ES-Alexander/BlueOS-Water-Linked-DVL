@@ -12,19 +12,20 @@ RUN cd /home/pi/cerulean-dvl && pip3 install .
 
 #Versioned Data
 LABEL version="1.0.0"
-LABEL permissions='\
+LABEL permissions '\
     {\
     "NetworkMode": "host"\
     }'
-LABEL authors='[\
+LABEL authors '[\
     {\
     "name": "Nick Nothom",\
     "email": "nick.nothom@ceruleansonar.com"\
     }\
     ]'
-LABEL docs='https://ceruleansonar.com/pages/cerulean-support'
-LABEL support='https://forum.ceruleansonar.com/categories'
-LABEL company='{\
+LABEL docs ''
+LABEL website 'https://ceruleansonar.com'
+LABEL support 'https://forum.ceruleansonar.com/categories'
+LABEL company '{\
     "about": "",\
     "name": "Cerulean Sonar",\
     "email": "dennys.bisogno@ceruleansonar.com"\
