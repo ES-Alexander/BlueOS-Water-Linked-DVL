@@ -30,5 +30,5 @@ LABEL company '{\
     "name": "Cerulean Sonar",\
     "email": "dennys.bisogno@ceruleansonar.com"\
     }'
-LABEL readme 'https://raw.githubusercontent.com/CeruleanSonar/BlueOS-Cerulean-DVL/{tag}/README.md'
+LABEL readme 'https://raw.githubusercontent.com/CeruleanSonar/BlueOS-Cerulean-DVL/master/README.md'
 ENTRYPOINT /home/pi/cerulean-dvl/main.py
