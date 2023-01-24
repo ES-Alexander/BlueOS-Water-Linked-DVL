@@ -54,7 +54,7 @@ class DvlDriver(threading.Thread):
     gps_update_interval = 10
     current_orientation = DVL_DOWN
     enabled = True
-    rangefinder = True
+    rangefinder_enable = True
     hostname = HOSTNAME
     timeout = 3  # tcp timeout in seconds
     origin = [0, 0]
@@ -98,7 +98,7 @@ class DvlDriver(threading.Thread):
                 self.current_orientation = data["orientation"]
                 self.hostname = data["hostname"]
                 self.origin = data["origin"]
-                self.rangefinder = data["rangefinder"]
+                self.rangefinder_enable = data["rangefinder_enable"]
                 self.should_send = data["should_send"]
                 logger.debug("Loaded settings: ", data)
 
@@ -132,7 +132,7 @@ class DvlDriver(threading.Thread):
                         "orientation": self.current_orientation,
                         "hostname": self.hostname,
                         "origin": self.origin,
-                        "rangefinder": self.rangefinder,
+                        "rangefinder_enable": self.rangefinder_enable,
                         "should_send": self.should_send,
                     }
                 )
@@ -148,8 +148,12 @@ class DvlDriver(threading.Thread):
             "orientation": self.current_orientation,
             "hostname": self.hostname,
             "origin": self.origin,
-            "rangefinder": self.rangefinder,
+            "rangefinder_enable": self.rangefinder_enable,
             "should_send": self.should_send,
+            "dvl_lock": self.dvl_lock,
+            "dvl_gps_status": self.dvl_gps_status,
+            "dvl_calibration": self.dvl_calibration,
+            "dvl_altitude": self.dvl_altitude
         }
 
     @property
@@ -304,7 +308,7 @@ class DvlDriver(threading.Thread):
         """
         Enables/disables DISTANCE_SENSOR messages
         """
-        self.rangefinder = enable
+        self.rangefinder_enable = enable
         self.save_settings()
         if enable:
             self.mav.set_param(
@@ -339,7 +343,7 @@ class DvlDriver(threading.Thread):
         self.mav.set_param(
             "EK3_SRC1_VELXY", "MAV_PARAM_TYPE_UINT8", 6)  # EXTNAV
         self.mav.set_param("EK3_SRC1_POSZ", "MAV_PARAM_TYPE_UINT8", 1)  # BARO
-        if self.rangefinder:
+        if self.rangefinder_enable:
             self.mav.set_param(
                 "RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
             self.mav.set_param(
@@ -397,7 +401,7 @@ class DvlDriver(threading.Thread):
             except Exception as e:
                 self.report_status(
                     f"Unable to reconnect: {e}, looking for dvl again...")
-                self.look_for_dvl()
+                # self.look_for_dvl()
         success = self.setup_connections()
         if success:
             self.last_recv_time = time.time()  # Don't disconnect directly after connect
@@ -431,7 +435,7 @@ class DvlDriver(threading.Thread):
         # feeding back the angles seemed to aggravate the gyro drift issue
         angles = [0, 0, 0]
 
-        if self.rangefinder:
+        if self.rangefinder_enable:
             self.mav.send_rangefinder(alt)
 
         if not valid:
@@ -483,7 +487,7 @@ class DvlDriver(threading.Thread):
         self.dvl_gain_d = data.gd
         self.dvl_altitude = data.t
 
-        if self.rangefinder and self.dvl_altitude > 0.05:
+        if self.rangefinder_enable and self.dvl_altitude > 0.05:
             self.mav.send_rangefinder(self.dvl_altitude)
 
     # def handle_position_local(self, data):

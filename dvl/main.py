@@ -99,6 +99,10 @@ if __name__ == "__main__":
     def register_service():
         return app.send_static_file("service.json")
 
+    @app.route("/manual")
+    def user_manual():
+        return app.send_static_file("dvl-75-user-manual/index.html")
+
     @app.route("/")
     def root():
         return app.send_static_file("index.html")

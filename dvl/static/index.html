@@ -17,7 +17,7 @@
 
 <style>
 	.v-card {
-		padding: 20px;
+		margin: 10px;
 	}
 </style>
 
@@ -25,19 +25,107 @@
 	<v-app>
 		<v-main>
 			<v-container>
-				<h1>Cerulean DVL Driver( {{ hostname }} )</h1>
+				<!-- <h1>Cerulean DVL ( {{ hostname }} )</h1> -->
 				<v-row>
-					<v-col>
-						<v-card height="600">
-							<v-switch v-model="this.enabled" inset :label="`Enable Driver`" @change="setDvlEnabled($event)"></v-switch>
-							<h2>Rangefinder:</h2>
-							<v-checkbox v-model="this.rangefinder" :label="`Use as MAVLink rangefinder`" @change="setDvlAsRangefinder($event)"></v-checkbox>
-							<h4>Status</h4>
-							<div>
+					<v-col class="col-12 col-md-6">
+						<v-card>
+							<v-toolbar :color="this.enabled? 'light-blue darken-3' : 'grey darken-3'" dark>
+								<v-toolbar-title>DVL Tracking</v-toolbar-title>
+								<v-spacer></v-spacer>
+								<v-switch inset v-model="this.enabled" @change="setDvlEnabled($event)" hide-details></v-switch>
+							</v-toolbar>
+							<v-card-text>
+								<v-row>
+									<v-col cols="3">
+									<div class="font-weight-bold">Driver Status: </div>
 
-								<textarea readonly style="width:100%;"
-									id="dvl-status"> {{status}} </textarea>
-							</div>
+									</v-col>
+									<v-col cols="9">
+										<div> {{status}} </div>
+									</v-col>
+								</v-row>
+							</v-card-text>
+	
+							<v-simple-table>
+								<template v-slot:default>
+									<thead>
+										<tr>
+											<th class="text-left">
+												Parameter
+											</th>
+											<th class="text-left">
+												Status
+											</th>
+											<th class="text-left">
+												Raw
+											</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr v-for="(item, key) in dvl">
+											<td>{{ item.name }}</td>
+											<td v-if="item.descriptions">
+												<div v-if="item.descriptions[item.value]">{{ item.descriptions[item.value] }}</div>
+												<div v-else>{{getDescription(key, item)}}</div>
+											</td>
+											<td v-else>{{getDescription(key, item)}}</td>
+											<td>{{ item.value }}</td>
+
+										</tr>
+									</tbody>
+								</template>
+							</v-simple-table>
+						</v-card>
+
+						<v-card >
+							<v-toolbar 
+							:color="(this.rangefinder_enable && this.enabled) ? 'light-blue darken-3' : 'grey darken-3'"
+							dark>	
+								<v-toolbar-title>Rangefinder</v-toolbar-title>				
+								<v-spacer></v-spacer>
+								<!-- <v-btn icon>
+									<v-icon>mdi-magnify</v-icon>
+								</v-btn>
+								 -->
+								<v-switch inset v-model="this.rangefinder_enable" @change="setDvlAsRangefinder($event)" hide-details></v-switch>
+							</v-toolbar>
+							
+							<v-card-text>
+								<v-row align="center">
+									<v-col cols="6">
+									<v-card-subtitle class="pb-0">
+										The DVL can function as an altimeter or obstacle sensor by sending Mavlink rangefinder messages to ArduSub.
+									</v-card-subtitle>
+										<!-- <v-img src="https://cdn.vuetifyjs.com/images/cards/sun.png" alt="Sunny image" width="92"></v-img> -->
+										<!-- <v-icon x-large>mdi-signal-distance-variant</v-icon> -->
+									</v-col>
+									<v-col class="text-h3" cols="6">
+										<div>
+										<span v-if="this.rangefinder === -1 || this.rangefinder === 0">-- Meters</span>
+										<span v-else>{{this.rangefinder}} Meters</span>
+										<v-icon x-large v-if="this.orientation === 2">mdi-signal-distance-variant</v-icon>
+										<v-icon x-large v-if="this.orientation === 1">mdi-signal-distance-variant mdi-rotate-90</v-icon>
+										</div>
+									</v-col>
+								</v-row>
+							</v-card-text>
+						</v-card>
+
+						<v-card>
+							<v-toolbar color="grey darken-3" dark>
+								<v-toolbar-title>Settings</v-toolbar-title>
+								<v-spacer></v-spacer>
+								<!-- <v-switch inset v-model="this.rangefinder_enable" @change="setDvlAsRangefinder($event)" hide-details></v-switch> -->
+							</v-toolbar>
+							<v-card-text>
+							<h3>Orientation:</h3>
+							<v-radio-group v-model="this.orientation">
+								<v-radio v-for="(item, key) in orientationOptions" :key="item" :label="key" :value="item"
+									@change="setDvlOrientation(item)"></v-radio>
+							</v-radio-group>
+							</v-card-text>
+
+							<!-- Future Settings: Set DVL declination,  -->
 						</v-card>
 					</v-col>
 					<!-- uncomment this to have control of what kind of message is being sent and to allow pointing the dvl forward-->
@@ -51,37 +139,29 @@
 							</v-radio-group>
 						</v-card>
 					</v-col> -->
-					<v-col>
-						<v-card height="200">
-							<h2>Orientation:</h2>
-							<v-radio-group v-model="this.orientation">
-								<v-radio v-for="(item, key) in orientationOptions" :key="item" :label="key" :value="item" @change="setDvlOrientation(item)"></v-radio>
-							</v-radio-group>
-						</v-card>
-					</v-col>
-					<v-col>
-					
-					<v-col
-					class="col-12 col-sm-6 col-md-8">
-						<v-card height="600">
-							<h3>Set Current Location</h3>
+
+					<v-col class="col-12 col-md-6">
+						<v-card>
+							<v-toolbar color="grey darken-3" dark>
+								<v-toolbar-title>Location</v-toolbar-title>
+								<v-spacer></v-spacer>
+								<!-- <v-switch inset v-model="this.rangefinder_enable" @change="setDvlAsRangefinder($event)" hide-details></v-switch> -->
+							</v-toolbar>
+							<!-- <h3>Set Current Location</h3> -->
 							<div id="mapid" style="height: 450px;"></div>
-							<form>
-								<label for="lat">Latitude:</label>
-								<input type="text" id="lat" name="lat" v-model="this.newOrigin[0]">
-								<label for="long">Longitude:</label>
-								<input type="text" id="long" name="long" v-model="this.newOrigin[1]">
-							</form>
-							<v-btn type="button" class="btn btn-primary" @click="setCurrentLocation();">Set Current Location</v-btn>
+							<v-card-text>
+								<form>
+									<label for="lat">Latitude:</label>
+									<input type="text" id="lat" name="lat" v-model="this.newOrigin[0]">
+									<br>
+									<label for="long">Longitude:</label>
+									<input type="text" id="long" name="long" v-model="this.newOrigin[1]">
+									<br>
+									<v-btn type="button" class="btn btn-primary" @click="setCurrentLocation();">Set Current Location</v-btn>
+
+								</form>
+							</v-card-text>
 						</v-card>
-					</v-col>
-				</v-row>
-				<v-row>
-					<v-col>
-						<!-- Cerulean DVL has no GUI -->
-						<!-- <v-card height="900" v-if='hostname'>
-							<iframe style="width: 100%; height: 100%;" :src='`http://${hostname}`'></iframe>
-						</v-card> -->
 					</v-col>
 				</v-row>
 			</v-container>
@@ -105,16 +185,37 @@
 				orientation: null,
 				origin: [0, 0],
 				newOrigin: [0, 0],
-				rangefinder: null,
+				rangefinder_enable: null,
+				rangefinder: -1,
 				messageToSend: null,
 				hostname: null,
 				rovMarker: undefined,
 				newHostname: null,
 				rovPosition: [],
+				dvl_lock: null,
+				dvl_gps_status: null,
+				dvl_calibration: null,
+				dvl: {
+					lock: {name: "Lock", value: null, 
+						descriptions: {
+							"T" : "DVL has lock on bottom",
+							"F": "DVL searching for bottom"
+						}
+					},
+					gps_status: { name: "GPS Status", value: null,
+						descriptions: {
+							"A": "Fresh Fix",
+							"V": "Invalid Fix",
+							"X": "Stale Fix"
+						}
+					},
+					calibration: { name: "IMU Calibration", value: null
+					}
+				},
 				messageOptions: ["POSITION_DELTA", "POSITION_ESTIMATE", "SPEED_ESTIMATE"],
 				orientationOptions: {
-					"Downwards (LED pointing forward)": 1,
-					"Forward (Experimental)": 2,
+					"Downward": 1,
+					"Forward": 2,
 				}
 			}
 		},
@@ -131,13 +232,18 @@
 						if (this.newOrigin === ['0','0']) {
 							this.newOrigin = data.origin
 						}
-						this.rangefinder = data.rangefinder
+						this.rangefinder_enable= data.rangefinder_enable
 						this.messageToSend = data.messageToSend
-					  this.hostname = data.hostname
+					  	this.hostname = data.hostname
 						this.messageToSend = data.should_send
 						if (this.newHostname == null) {
 							this.newHostname = data.hostname
 						}
+						this.dvl.lock.value = data.dvl_lock
+						this.dvl.gps_status.value = data.dvl_gps_status
+						this.dvl.calibration.value = data.dvl_calibration
+						this.rangefinder = data.dvl_altitude
+						// this.dvl.calibration.value = "1234"
 					})
 					.catch((error) => {
 						this.status = `Unable to talk to DVL service: ${error}`
@@ -205,7 +311,7 @@
 				request.send();
 			},
 
-			/* Toggles driver on/off */
+			/* Toggles rangefinder on/off */
 			setDvlAsRangefinder(value) {
 				const request = new XMLHttpRequest();
 				request.timeout = 800;
@@ -243,6 +349,28 @@
 				request.timeout = 800;
 				request.open('GET', 'setcurrentposition/' + this.newOrigin[0] + '/' + this.newOrigin[1], true);
 				request.send();
+			},
+			getDescription(key, item){
+				if (item.value == null){
+					return "..."
+				}
+				desc = ""
+
+				if (key == "calibration"){
+					if (item.value == "WAIT"){
+						desc = "Please rotate the vehicle"
+					}
+					else {
+						desc =
+							"Sys:" + item.value[0] + "|" +
+							"Gyro:" + item.value[1] + "|" +
+							"Accel:" + item.value[2] + "|" +
+							"Mag:" + item.value[3] 
+					}
+	
+				}
+				// console.log(item)
+				return desc
 			},
 
 		},
