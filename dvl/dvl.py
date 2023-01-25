@@ -22,6 +22,8 @@ HOSTNAME = "192.168.2.3"
 DVL_DOWN = 1
 DVL_FORWARD = 2
 LATLON_TO_CM = 1.1131884502145034e5
+POOL_MODE_COMMAND = "MANUAL-MODE 0.001,10.0,0.5,56,0.1,50,20.6,-0.671,100,100"
+AUTOMATIC_MODE_COMMAND = "MANUAL-MODE OFF"
 
 
 class MessageType(str, Enum):
@@ -78,6 +80,7 @@ class DvlDriver(threading.Thread):
     dvl_gain_c = -1
     dvl_gain_d = -1
     dvl_altitude = -1
+    pool_mode = False
 
     def __init__(self, orientation=DVL_DOWN) -> None:
         threading.Thread.__init__(self)
@@ -313,6 +316,20 @@ class DvlDriver(threading.Thread):
         if enable:
             self.mav.set_param(
                 "RNGFND1_TYPE", "MAV_PARAM_TYPE_UINT8", 10)  # MAVLINK
+        return True
+
+    def set_pool_mode(self, enable: bool) -> bool:
+        """
+        Enables/disables DISTANCE_SENSOR messages
+        """
+        self.pool_mode = enable
+        # self.save_settings()
+        if enable:
+            message = POOL_MODE_COMMAND + "\r\n"
+            self.socket.sendto(message.encode(), (self.host, self.port))
+        else:
+            message = AUTOMATIC_MODE_COMMAND + "\r\n"
+            self.socket.sendto(message.encode(), (self.host, self.port))
         return True
 
     def setup_mavlink(self) -> None:

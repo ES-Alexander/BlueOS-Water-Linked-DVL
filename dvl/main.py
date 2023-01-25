@@ -63,6 +63,14 @@ class API:
             return self.dvl.set_use_as_rangefinder(enabled == "true")
         return False
 
+    def set_pool_mode(self, enabled: str) -> bool:
+        """
+        Enables/disables usage of DVL as rangefinder
+        """
+        if enabled in ["true", "false"]:
+            return self.dvl.set_pool_mode(enabled == "true")
+        return False
+
     def set_message_type(self, messagetype: str):
         self.dvl.set_should_send(messagetype)
 
@@ -99,9 +107,9 @@ if __name__ == "__main__":
     def register_service():
         return app.send_static_file("service.json")
 
-    @app.route("/manual")
-    def user_manual():
-        return app.send_static_file("dvl-75-user-manual/index.html")
+    @app.route("/setpoolmode/<enable>")
+    def set_pool_mode(enable: str):
+        return str(api.set_pool_mode(enable))
 
     @app.route("/")
     def root():

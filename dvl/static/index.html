@@ -42,10 +42,10 @@
 									</v-col>
 									<v-col cols="9">
 										<div> {{status}} </div>
-									</v-col>
+									</v-col>									
 								</v-row>
 							</v-card-text>
-	
+
 							<v-simple-table>
 								<template v-slot:default>
 									<thead>
@@ -123,6 +123,10 @@
 								<v-radio v-for="(item, key) in orientationOptions" :key="item" :label="key" :value="item"
 									@change="setDvlOrientation(item)"></v-radio>
 							</v-radio-group>
+						
+							<h3>Pool Mode:</h3>
+							<v-switch inset v-model="this.dvl_pool_mode" @change="setPoolMode($event)" hide-details></v-switch>			
+
 							</v-card-text>
 
 							<!-- Future Settings: Set DVL declination,  -->
@@ -195,6 +199,7 @@
 				dvl_lock: null,
 				dvl_gps_status: null,
 				dvl_calibration: null,
+				dvl_pool_mode: null,
 				dvl: {
 					lock: {name: "Lock", value: null, 
 						descriptions: {
@@ -243,7 +248,7 @@
 						this.dvl.gps_status.value = data.dvl_gps_status
 						this.dvl.calibration.value = data.dvl_calibration
 						this.rangefinder = data.dvl_altitude
-						// this.dvl.calibration.value = "1234"
+						//this.dvl.calibration.value = "WAIT"
 					})
 					.catch((error) => {
 						this.status = `Unable to talk to DVL service: ${error}`
@@ -350,6 +355,12 @@
 				request.open('GET', 'setcurrentposition/' + this.newOrigin[0] + '/' + this.newOrigin[1], true);
 				request.send();
 			},
+			setPoolMode(value){
+				const request = new XMLHttpRequest();
+				request.timeout = 800;
+				request.open('GET', 'setpoolmode/' + value, true);
+				request.send();
+			},
 			getDescription(key, item){
 				if (item.value == null){
 					return "..."
@@ -360,7 +371,10 @@
 					if (item.value == "WAIT"){
 						desc = "Please rotate the vehicle"
 					}
-					else {
+					else if (item.value == "OK"){
+						desc = "Calibration is good" 
+					}
+					else if ((Number.isInteger(Number(item.value))) && (item.value.length == 4)) {
 						desc =
 							"Sys:" + item.value[0] + "|" +
 							"Gyro:" + item.value[1] + "|" +
