@@ -11,7 +11,7 @@ COPY dvl /home/pi/cerulean-dvl
 RUN cd /home/pi/cerulean-dvl && pip3 install .
 
 #Versioned Data
-LABEL version="1.0.1"
+LABEL version="1.0.2"
 LABEL permissions '\
     {\
     "NetworkMode": "host"\
