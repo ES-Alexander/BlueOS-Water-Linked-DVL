@@ -288,8 +288,14 @@
 					subdomains:['mt0','mt1','mt2','mt3'],
 					maxNativeZoom: 20
 				}).addTo(map);
-
-				marker = L.marker([33.841456, -118.335212], { title: "New Origin", draggable: true })
+				var myIcon = L.icon(
+					{
+						iconUrl: '/static/marker-icon.png',
+						iconSize: [25, 41],
+						iconAnchor: [12, 41],
+						className: 'pinmarker',
+					});
+				marker = L.marker([33.841456, -118.335212], { title: "New Origin", icon: myIcon, draggable: true })
 					.addTo(map)
 					.on('dragend', (event) => {
 						this.newOrigin = [event.latlng.lat, event.latlng.lng]

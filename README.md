@@ -1,6 +1,8 @@
 # BlueOS-Cerulean-DVL
 
-This is a docker implementation of a Cerulean DVL driver for the new Blue Robotics BlueOS.
+Cerulean DVL driver, compatible with Blue Robotics BlueOS.
+
+## Manual Installation: 
 
 To set this up, ssh into the Raspberry Pi (or access via `red-pill` in [BlueOS Terminal](https://docs.bluerobotics.com/ardusub-zola/software/onboard/BlueOS-1.0/advanced-usage/#terminal)) and run
 
