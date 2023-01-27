@@ -68,13 +68,13 @@ class DvlDriver(threading.Thread):
     #timestamp = 0
 
     # Cerulean DVL Info
-    dvl_lock = "F"
-    dvl_gps_status = "V"
-    dvl_calibration = "0000"
-    dvl_lock_a = "F"
-    dvl_lock_b = "F"
-    dvl_lock_c = "F"
-    dvl_lock_d = "F"
+    dvl_lock = ""
+    dvl_gps_status = ""
+    dvl_calibration = ""
+    dvl_lock_a = ""
+    dvl_lock_b = ""
+    dvl_lock_c = ""
+    dvl_lock_d = ""
     dvl_gain_a = -1
     dvl_gain_b = -1
     dvl_gain_c = -1
@@ -305,6 +305,10 @@ class DvlDriver(threading.Thread):
         """
         self.enabled = enable
         self.save_settings()
+        if enable:
+            self.resume()
+        else:
+            self.pause()
         return True
 
     def set_use_as_rangefinder(self, enable: bool) -> bool:
@@ -371,6 +375,7 @@ class DvlDriver(threading.Thread):
         self.set_dvpdl_enabled()
         self.set_dvext_enabled()
         self.set_retweet_imu_enabled(False)
+        self.set_gprmc_enabled(False)
 
     def setup_connections(self, timeout=300) -> None:
         """
@@ -552,6 +557,10 @@ class DvlDriver(threading.Thread):
         setting = "RETWEET-IMU"
         self.set_dvl_setting(setting, enable)
 
+    def set_gprmc_enabled(self, enable=True):
+        setting = "SEND-GPRMC"
+        self.set_dvl_setting(setting, enable)
+
     def set_dvl_setting(self, setting, enable=True):
         command = ""
         if enable:
@@ -559,6 +568,19 @@ class DvlDriver(threading.Thread):
         else:
             command = "OFF"
         message = setting + " " + command + "\r\n"
+        self.socket.sendto(message.encode(), (self.host, self.port))
+        time.sleep(0.1)
+
+    def resume(self):
+        message = "RESUME" + "\r\n"
+        self.socket.sendto(message.encode(), (self.host, self.port))
+
+    def pause(self):
+        message = "PAUSE" + "\r\n"
+        self.socket.sendto(message.encode(), (self.host, self.port))
+
+    def reboot(self):
+        message = "REBOOT" + "\r\n"
         self.socket.sendto(message.encode(), (self.host, self.port))
 
     def run(self):
@@ -575,6 +597,10 @@ class DvlDriver(threading.Thread):
         self.setup_params()
         self.setup_dvl()
         time.sleep(1)
+        if (self.enabled):
+            self.resume()
+        else:
+            self.pause()
         self.report_status("Running")
         self.last_recv_time = time.time()
         buf = ""
