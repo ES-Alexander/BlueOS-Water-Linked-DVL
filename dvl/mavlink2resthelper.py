@@ -160,7 +160,7 @@ class Mavlink2RestHelper:
     }},
     "id": 0,
     "orientation": {{
-      "type": "MAV_SENSOR_ROTATION_PITCH_270"
+      "type": "{1}"
     }},
     "covariance": 0,
     "horizontal_fov": 0.0,
@@ -361,12 +361,19 @@ class Mavlink2RestHelper:
         logger.info(post(MAVLINK2REST_URL + "/mavlink", data=data))
 
     # https://mavlink.io/en/messages/common.html#DISTANCE_SENSOR
-    def send_rangefinder(self, distance: float):
+    def send_rangefinder(self, distance: float, orientation=1):
         "Sends message DISTANCE_SENSOR to flight controller"
         if distance == -1:
             return
-        data = self.rangefinder_template.format(int(distance * 100))
+        if orientation == 1:
+            sensor_orientation = "MAV_SENSOR_ROTATION_PITCH_270"
+        elif orientation == 2:
+            sensor_orientation = "MAV_SENSOR_ROTATION_NONE"
+        else:
+            sensor_orientation = "MAV_SENSOR_ROTATION_PITCH_270"
 
+        data = self.rangefinder_template.format(
+            int(distance * 100), str(sensor_orientation).replace("'", '"'))
         post(MAVLINK2REST_URL + "/mavlink", data=data)
 
     def set_gps_origin(self, lat, lon):

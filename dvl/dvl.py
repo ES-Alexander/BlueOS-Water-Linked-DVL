@@ -524,8 +524,9 @@ class DvlDriver(threading.Thread):
         self.dvl_gain_d = data.gd
         self.dvl_altitude = data.t
 
-        if self.current_orientation == DVL_DOWN and self.rangefinder_enable and self.dvl_altitude > 0.05:
-            self.mav.send_rangefinder(self.dvl_altitude)
+        if self.rangefinder_enable and self.dvl_altitude > 0.05:
+            self.mav.send_rangefinder(
+                self.dvl_altitude, self.current_orientation)
 
     def handle_configuration(self, cfg):
         # Clear Config
