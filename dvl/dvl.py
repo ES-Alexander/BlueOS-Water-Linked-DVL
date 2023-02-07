@@ -50,6 +50,7 @@ class DvlDriver(threading.Thread):
     version = ""
     mav = Mavlink2RestHelper()
     socket = None
+    command_port = 50000
     port = 27000
     last_attitude = (0, 0, 0)  # used for calculating the attitude delta
     last_gps_timestamp = 0
@@ -58,10 +59,11 @@ class DvlDriver(threading.Thread):
     enabled = True
     rangefinder_enable = True
     hostname = HOSTNAME
-    timeout = 3  # tcp timeout in seconds
+    timeout = 10  # tcp timeout in seconds
     origin = [0, 0]
     settings_path = os.path.join(os.path.expanduser(
         "~"), ".config", "dvl", "settings.json")
+    configuration = []
 
     should_send = MessageType.POSITION_DELTA
     reset_counter = 0
@@ -202,9 +204,17 @@ class DvlDriver(threading.Thread):
 
     def set_orientation(self, orientation: int) -> bool:
         """
-        Sets the DVL orientation, either DVL_FORWARD of DVL_DOWN
+        Sets the DVL orientation, either DVL_FORWARD or DVL_DOWN
         """
+
         if orientation in [DVL_FORWARD, DVL_DOWN]:
+            if orientation == DVL_DOWN:
+                angles = "0,0,0"
+            elif orientation == DVL_FORWARD:
+                angles = "0,90,0"
+            message = "SET-SENSOR-ORIENTATION " + angles + "\r\n"
+            self.socket.sendto(
+                message.encode(), (self.host, self.command_port))
             self.current_orientation = orientation
             self.save_settings()
             return True
@@ -330,10 +340,12 @@ class DvlDriver(threading.Thread):
         # self.save_settings()
         if enable:
             message = POOL_MODE_COMMAND + "\r\n"
-            self.socket.sendto(message.encode(), (self.host, self.port))
+            self.socket.sendto(
+                message.encode(), (self.host, self.command_port))
         else:
             message = AUTOMATIC_MODE_COMMAND + "\r\n"
-            self.socket.sendto(message.encode(), (self.host, self.port))
+            self.socket.sendto(
+                message.encode(), (self.host, self.command_port))
         return True
 
     def setup_mavlink(self) -> None:
@@ -376,7 +388,9 @@ class DvlDriver(threading.Thread):
         self.set_dvext_enabled()
         self.set_retweet_imu_enabled(False)
         self.set_gprmc_enabled(False)
+        self.set_orientation(self.current_orientation)
 
+    # TCP
     def setup_connections(self, timeout=300) -> None:
         """
         Sets up the socket to talk to the DVL
@@ -394,7 +408,8 @@ class DvlDriver(threading.Thread):
             f"Setup connection to {self.host}:{self.port} timed out")
         return False
 
-    def setup_socket(self, timeout=300):
+    # UDP
+    def setup_connections_udp(self, timeout=300):
         """
         Sets up the socket to talk to the DVL
         """
@@ -424,7 +439,7 @@ class DvlDriver(threading.Thread):
                 self.report_status(
                     f"Unable to reconnect: {e}, looking for dvl again...")
                 # self.look_for_dvl()
-        success = self.setup_connections()
+        success = self.setup_connections_udp()
         if success:
             self.last_recv_time = time.time()  # Don't disconnect directly after connect
             return True
@@ -509,8 +524,18 @@ class DvlDriver(threading.Thread):
         self.dvl_gain_d = data.gd
         self.dvl_altitude = data.t
 
-        if self.rangefinder_enable and self.dvl_altitude > 0.05:
+        if self.current_orientation == DVL_DOWN and self.rangefinder_enable and self.dvl_altitude > 0.05:
             self.mav.send_rangefinder(self.dvl_altitude)
+
+    def handle_configuration(self, cfg):
+        # Clear Config
+        self.configuration = []
+        # Set new config
+        for i in cfg.split(","):
+            item = i.split("=")
+            if len(item) > 1:
+                self.configuration.append(item)
+                print(item)
 
     # def handle_position_local(self, data):
     #     # if True:
@@ -535,6 +560,16 @@ class DvlDriver(threading.Thread):
         # print(packet)
         try:
             if (packet[0:5] == 'GPS:$'):
+                return True
+            else:
+                return False
+        except Exception as error:
+            pass
+
+    def is_configuration(self, packet):
+        # print(packet)
+        try:
+            if (packet[0:7] == "$DVNVM,"):
                 return True
             else:
                 return False
@@ -568,20 +603,24 @@ class DvlDriver(threading.Thread):
         else:
             command = "OFF"
         message = setting + " " + command + "\r\n"
-        self.socket.sendto(message.encode(), (self.host, self.port))
+        self.socket.sendto(message.encode(), (self.host, self.command_port))
         time.sleep(0.1)
+
+    def get_configuration(self):
+        message = "?" + "\r\n"
+        self.socket.sendto(message.encode(), (self.host, self.command_port))
 
     def resume(self):
         message = "RESUME" + "\r\n"
-        self.socket.sendto(message.encode(), (self.host, self.port))
+        self.socket.sendto(message.encode(), (self.host, self.command_port))
 
     def pause(self):
         message = "PAUSE" + "\r\n"
-        self.socket.sendto(message.encode(), (self.host, self.port))
+        self.socket.sendto(message.encode(), (self.host, self.command_port))
 
     def reboot(self):
         message = "REBOOT" + "\r\n"
-        self.socket.sendto(message.encode(), (self.host, self.port))
+        self.socket.sendto(message.encode(), (self.host, self.command_port))
 
     def run(self):
         """
@@ -590,21 +629,22 @@ class DvlDriver(threading.Thread):
         self.load_settings()
         self.save_settings()
         # self.look_for_dvl()
-        # self.setup_connections()
-        self.setup_socket()
+        self.setup_connections_udp()
         self.wait_for_vehicle()
         self.setup_mavlink()
         self.setup_params()
         self.setup_dvl()
         time.sleep(1)
-        if (self.enabled):
-            self.resume()
-        else:
-            self.pause()
-        self.report_status("Running")
         self.last_recv_time = time.time()
         buf = ""
         connected = True
+        if (self.enabled):
+            self.resume()
+            self.get_configuration()
+        else:
+            self.pause()
+        self.report_status("Running")
+
         while True:
             if not self.enabled:
                 time.sleep(1)
@@ -630,10 +670,8 @@ class DvlDriver(threading.Thread):
             if len(buf) > 0:
                 lines = buf.split("\n", 1)
                 if len(lines) > 1:
-                    # print(lines)
                     buf = lines[1]
                     line = lines[0]
-                    # data = json.loads(lines[0])
             if self.is_nmea(line):
                 data = pynmea2.parse(line)
                 # print(repr(data))
@@ -655,6 +693,10 @@ class DvlDriver(threading.Thread):
                                 data.latitude, data.longitude)
                 except Exception as error:
                     continue
+            elif self.is_configuration(line):
+                self.handle_configuration(line)
+            elif line != None:
+                print(line)
 
             if not connected:
                 buf = ""
